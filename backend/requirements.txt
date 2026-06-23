@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+httpx
+sqlalchemy
+asyncpg
+python-dotenv
+pydantic
+alembic
+passlib[bcrypt]
+bcrypt
+PyJWT
+python-multipart
+pytest
+black
+flake8
