@@ -1,0 +1,42 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: agent-proxy-backend
+          region: us-central1
+          source: ./backend
+          env_vars: |-
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            FIREWALL_MODE=BLOCK
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          flags: |-
+            --allow-unauthenticated
+            --no-cpu-throttling
+            --min-instances=1
+            --max-instances=50
+            --port=8000

@@ -31,7 +31,6 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
-alembic.ini
 
 # Next.js specific
 .pnp

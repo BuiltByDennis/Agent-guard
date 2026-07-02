@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-proxy-backend
+  labels:
+    app: agent-proxy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: agent-proxy
+  template:
+    metadata:
+      labels:
+        app: agent-proxy
+    spec:
+      containers:
+      - name: agent-proxy
+        image: gcr.io/your-project/agent-proxy:${VERSION:-latest}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: agent-proxy-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: agent-proxy-secrets
+              key: REDIS_URL
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-proxy-secrets
+              key: JWT_SECRET_KEY
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-proxy-secrets
+              key: OPENAI_API_KEY
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: agent-proxy-secrets
+              key: SENTRY_DSN
+              optional: true
+        - name: FIREWALL_MODE
+          value: "BLOCK"
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
