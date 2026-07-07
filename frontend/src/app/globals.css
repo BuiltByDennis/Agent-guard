@@ -1,0 +1,76 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 211 75.6% 8%;
+    --foreground: 214.7 79.2% 90.6%;
+    --card: 211 46.3% 13.1%;
+    --card-foreground: 214.7 79.2% 90.6%;
+    --popover: 211 46.3% 13.1%;
+    --popover-foreground: 214.7 79.2% 90.6%;
+    --primary: 238.7 83.5% 66.7%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 214.7 79.2% 90.6%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 213.8 26.7% 23.5%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 238.7 83.5% 66.7%;
+    --radius: 0.25rem;
+  }
+  
+  .dark {
+    --background: 211 75.6% 8%;
+    --foreground: 214.7 79.2% 90.6%;
+    --card: 211 46.3% 13.1%;
+    --card-foreground: 214.7 79.2% 90.6%;
+    --popover: 211 46.3% 13.1%;
+    --popover-foreground: 214.7 79.2% 90.6%;
+    --primary: 238.7 83.5% 66.7%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 214.7 79.2% 90.6%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 213.8 26.7% 23.5%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 238.7 83.5% 66.7%;
+  }
+
+  * {
+    @apply border-border ring-ring/50;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-emerald-500 { background-color: #10b981; }
+  .text-emerald-500 { color: #10b981; }
+  .bg-amber-500 { background-color: #f59e0b; }
+  .text-amber-500 { color: #f59e0b; }
+  .bg-ruby-500 { background-color: #e11d48; }
+  .text-ruby-500 { color: #e11d48; }
+  
+  .font-heading { font-family: var(--font-geist); }
+  .font-sans { font-family: var(--font-inter); }
+  .font-mono { font-family: var(--font-jetbrains); }
+}
