@@ -18,5 +18,18 @@ spec:
     - protocol: TCP
       port: 8000
   egress:
-  # Allow all egress for OpenAI API and DB connections, but this should be tightened in prod
-  - {}
+  # Restrict egress in prod to specific IPs or CIDR blocks if known.
+  # Here we restrict by specific required ports as a baseline.
+  - ports:
+    - protocol: UDP
+      port: 53      # DNS
+    - protocol: TCP
+      port: 53      # DNS
+    - protocol: TCP
+      port: 443     # OpenAI API, Sentry
+    - protocol: TCP
+      port: 5432    # Postgres
+    - protocol: TCP
+      port: 6543    # Supabase PgBouncer
+    - protocol: TCP
+      port: 6379    # Redis

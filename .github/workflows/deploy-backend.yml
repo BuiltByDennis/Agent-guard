@@ -34,6 +34,7 @@ jobs:
             JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
             FIREWALL_MODE=BLOCK
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
           flags: |-
             --allow-unauthenticated
             --no-cpu-throttling

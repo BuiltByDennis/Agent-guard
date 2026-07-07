@@ -16,6 +16,7 @@ from services.velocity import check_cost_velocity, is_agent_suspended, suspend_a
 from services.telemetry import save_interaction_to_db
 from schemas import ChatCompletionRequest
 from core.limiter import limiter
+from core.metrics import OPENAI_REQUEST_COUNT, OPENAI_REQUEST_LATENCY, OPENAI_ERROR_COUNT
 
 router = APIRouter(prefix="/v1", tags=["proxy"])
 
@@ -47,6 +48,17 @@ def num_tokens_from_string(string: str, model_name: str) -> int:
     except KeyError:
         encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(string))
+
+MODEL_PRICING = {
+    "gpt-4o": 0.005,
+    "gpt-4o-mini": 0.00015,
+    "gpt-4": 0.03,
+    "gpt-3.5-turbo": 0.0015,
+}
+
+def get_cost(model_name: str, tokens: int) -> float:
+    price_per_1k = MODEL_PRICING.get(model_name, 0.002)
+    return (tokens / 1000) * price_per_1k
 
 async def stream_openai_response(request_json: dict, background_tasks: BackgroundTasks, agent: Agent, agent_type: str, start_time: float, model: str):
     agent_id = agent.agent_id
@@ -88,10 +100,17 @@ async def stream_openai_response(request_json: dict, background_tasks: Backgroun
                 else:
                     yield redacted.encode('utf-8')
                     full_text += redacted
+        except httpx.RequestError as e:
+            OPENAI_ERROR_COUNT.labels(agent_type=agent_type, model=model, error_type="stream_error").inc()
+            yield f'{{"error": "Stream disconnected or timed out: {str(e)}" }}'.encode('utf-8')
         finally:
             token_count = num_tokens_from_string(full_text, model)
             latency_ms = (time.time() - start_time) * 1000
-            cost = (token_count / 1000) * 0.002
+            
+            OPENAI_REQUEST_COUNT.labels(agent_type=agent_type, model=model, status_code=str(status_code)).inc()
+            OPENAI_REQUEST_LATENCY.labels(agent_type=agent_type, model=model).observe(latency_ms / 1000.0)
+            
+            cost = get_cost(model, token_count)
             
             span_data = {
                 "tenant_id": tenant_id,
@@ -146,7 +165,7 @@ async def chat_completions(request: Request, body: ChatCompletionRequest, backgr
         
         token_count = num_tokens_from_string(response.text, body.model)
         latency_ms = (time.time() - start_time) * 1000
-        cost = (token_count / 1000) * 0.002
+        cost = get_cost(body.model, token_count)
         
         response_text = response.text
         redacted, has_violation = scan_and_redact(response_text)
@@ -174,6 +193,9 @@ async def chat_completions(request: Request, body: ChatCompletionRequest, backgr
             "payload": body.model_dump(), "error_log": error_log
         }
         background_tasks.add_task(save_interaction_to_db, span_data)
+        
+        OPENAI_REQUEST_COUNT.labels(agent_type=agent_type, model=body.model, status_code=str(response.status_code)).inc()
+        OPENAI_REQUEST_LATENCY.labels(agent_type=agent_type, model=body.model).observe(latency_ms / 1000.0)
         
         if has_violation and settings.FIREWALL_MODE == "SANITIZE":
             try:

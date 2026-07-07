@@ -12,12 +12,14 @@ from typing import Optional
 
 from models import User, Agent
 from database import get_db, AsyncSessionLocal
+from core.config import settings
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError("JWT_SECRET_KEY must be set")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = settings.SECRET_KEY
+if not SECRET_KEY or SECRET_KEY == "change-me-in-production":
+    if not os.getenv("JWT_SECRET_KEY") and not os.getenv("SECRET_KEY"):
+        print("WARNING: Using default SECRET_KEY in production is insecure.")
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Initialize the modern, actively maintained password hashing tool
 password_hash = PasswordHash.recommended()
@@ -57,7 +59,7 @@ async def verify_agent_api_key(request: Request, api_key: str = Depends(api_key_
     if not api_key:
         raise HTTPException(status_code=401, detail="Missing X-API-Key header")
         
-    result = await db.execute(select(Agent).where(Agent.agent_id == agent_id))
+    result = await db.execute(select(Agent).where(Agent.agent_id == agent_id, Agent.deleted_at.is_(None)))
     agent = result.scalar_one_or_none()
     
     if not agent or not verify_password(api_key, agent.hashed_api_key) or not agent.is_active:

@@ -169,4 +169,4 @@ We welcome contributions! If you'd like to improve Vigilance Operations, please 
 ### Support & Contact
 If you encounter a bug or need assistance getting set up, please:
 - Open a GitHub issue in this repository.
-- Email us directly at `support@company.com`.
+- Email us directly at `dennyaaba@gmail.com`.

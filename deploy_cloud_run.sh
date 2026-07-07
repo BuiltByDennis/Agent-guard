@@ -17,6 +17,7 @@ REDIS_URL="redis://your-redis-host:6379"
 SENTRY_DSN="your-sentry-dsn"
 FIREWALL_MODE="BLOCK"
 OPENAI_API_KEY="your-openai-api-key"
+FRONTEND_URL="https://your-dashboard.vercel.app"
 
 echo "📦 Submitting build to Google Cloud Build..."
 # This command uploads your source code and builds the Docker image on GCP

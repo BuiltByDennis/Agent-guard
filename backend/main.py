@@ -52,6 +52,7 @@ structlog.configure(
 logger = structlog.get_logger(__name__)
 
 async def dlq_worker():
+    backoff = 1
     while True:
         try:
             redis_client = get_redis()
@@ -60,7 +61,13 @@ async def dlq_worker():
                 if item:
                     _, data = item
                     span_data = json.loads(data)
-                    await save_interaction_to_db(span_data)
+                    success = await save_interaction_to_db(span_data, from_dlq=True)
+                    if not success:
+                        await redis_client.lpush("telemetry_dlq", data)
+                        await asyncio.sleep(backoff)
+                        backoff = min(backoff * 2, 60)
+                    else:
+                        backoff = 1
             else:
                 await asyncio.sleep(5)
         except asyncio.CancelledError:
@@ -108,6 +115,10 @@ async def security_headers_middleware(request: Request, call_next):
 async def csrf_middleware(request: Request, call_next):
     # Skip CSRF check for auth endpoints (token, refresh, logout are handled separately)
     if request.url.path in ["/v1/auth/token", "/v1/auth/refresh", "/v1/auth/logout"]:
+        return await call_next(request)
+        
+    # Skip CSRF for routes using X-API-Key authentication (agent proxy calls)
+    if request.headers.get("X-API-Key"):
         return await call_next(request)
     
     if request.method in ["POST", "PATCH", "DELETE", "PUT"]:

@@ -10,8 +10,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@loc
 engine = create_async_engine(
     DATABASE_URL, 
     echo=False,
-    pool_size=20,
-    max_overflow=10
+    pool_size=5,
+    max_overflow=5
 )
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -20,6 +20,16 @@ import structlog
 from sqlalchemy import event
 
 logger = structlog.get_logger(__name__)
+
+from core.metrics import DB_POOL_CHECKEDOUT, DB_POOL_SIZE
+
+@event.listens_for(engine.sync_engine, "checkin")
+def receive_checkin(dbapi_connection, connection_record):
+    DB_POOL_CHECKEDOUT.dec()
+
+@event.listens_for(engine.sync_engine, "checkout")
+def receive_checkout(dbapi_connection, connection_record, connection_proxy):
+    DB_POOL_CHECKEDOUT.inc()
 
 @event.listens_for(engine.sync_engine, "before_cursor_execute")
 def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):

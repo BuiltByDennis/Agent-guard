@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     VELOCITY_LIMIT: float = Field(default=5.0)
     VELOCITY_WINDOW_SEC: float = Field(default=60.0)
     OPENAI_API_KEY: str = Field(default="dummy_key")
-    SECRET_KEY: str = Field(default="change-me-in-production")
+    SECRET_KEY: str = Field(default="change-me-in-production", alias="JWT_SECRET_KEY")
     ALGORITHM: str = Field(default="HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
     

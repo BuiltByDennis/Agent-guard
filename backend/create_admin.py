@@ -8,9 +8,11 @@ from database import AsyncSessionLocal
 from auth import get_password_hash
 from init_db import init_db
 
+import getpass
+
 async def create_admin():
     email = input("Enter admin email: ")
-    password = input("Enter admin password: ")
+    password = getpass.getpass("Enter admin password: ")
 
     await init_db()
 
