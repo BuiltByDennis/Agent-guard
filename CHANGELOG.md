@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/BuiltByDennis/Agent-guard/compare/v1.0.0...v1.0.1) (2026-07-08)
+
+
+### Bug Fixes
+
+* add pwdlib to requirements to prevent module not found crash ([65ca1da](https://github.com/BuiltByDennis/Agent-guard/commit/65ca1da0be00a7dab9e7dcfa370f5ac1a261b370))
+
 # 1.0.0 (2026-07-07)
 
 
