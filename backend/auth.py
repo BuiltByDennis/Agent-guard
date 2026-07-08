@@ -22,13 +22,24 @@ ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Initialize the modern, actively maintained password hashing tool
-password_hash = PasswordHash.recommended()
+from pwdlib import PasswordHash
+from pwdlib.hashers.argon2 import Argon2Hasher
+from pwdlib.hashers.bcrypt import BcryptHasher
+
+# Initialize with both Argon2 (new default) and Bcrypt (legacy support)
+password_hash = PasswordHash((
+    Argon2Hasher(),
+    BcryptHasher(),
+))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/token")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return password_hash.verify(plain_password, hashed_password)
+    try:
+        return password_hash.verify(plain_password, hashed_password)
+    except Exception as e:
+        return False
 
 def get_password_hash(password: str) -> str:
     return password_hash.hash(password)
