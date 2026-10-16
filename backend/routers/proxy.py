@@ -4,7 +4,12 @@ import json
 import tiktoken
 from fastapi import APIRouter, Request, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
 from models import Agent
 from auth import verify_agent_api_key
@@ -16,31 +21,40 @@ from services.velocity import check_cost_velocity, is_agent_suspended, suspend_a
 from services.telemetry import save_interaction_to_db
 from schemas import ChatCompletionRequest
 from core.limiter import limiter
-from core.metrics import OPENAI_REQUEST_COUNT, OPENAI_REQUEST_LATENCY, OPENAI_ERROR_COUNT
+from core.metrics import (
+    OPENAI_REQUEST_COUNT,
+    OPENAI_REQUEST_LATENCY,
+    OPENAI_ERROR_COUNT,
+)
 
 router = APIRouter(prefix="/v1", tags=["proxy"])
+
 
 @retry(
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(3),
-    retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError))
+    retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
 )
-async def _send_openai_request(client: httpx.AsyncClient, req: httpx.Request, stream: bool = False):
+async def _send_openai_request(
+    client: httpx.AsyncClient, req: httpx.Request, stream: bool = False
+):
     response = await client.send(req, stream=stream)
     if response.status_code >= 500 or response.status_code == 429:
         response.raise_for_status()
     return response
 
+
 @retry(
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(3),
-    retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError))
+    retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
 )
 async def _post_openai_request(client: httpx.AsyncClient, url: str, **kwargs):
     response = await client.post(url, **kwargs)
     if response.status_code >= 500 or response.status_code == 429:
         response.raise_for_status()
     return response
+
 
 def num_tokens_from_string(string: str, model_name: str) -> int:
     try:
@@ -49,6 +63,7 @@ def num_tokens_from_string(string: str, model_name: str) -> int:
         encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(string))
 
+
 MODEL_PRICING = {
     "gpt-4o": 0.005,
     "gpt-4o-mini": 0.00015,
@@ -56,62 +71,84 @@ MODEL_PRICING = {
     "gpt-3.5-turbo": 0.0015,
 }
 
+
 def get_cost(model_name: str, tokens: int) -> float:
     price_per_1k = MODEL_PRICING.get(model_name, 0.002)
     return (tokens / 1000) * price_per_1k
 
-async def stream_openai_response(request_json: dict, background_tasks: BackgroundTasks, agent: Agent, agent_type: str, start_time: float, model: str):
+
+async def stream_openai_response(
+    request_json: dict,
+    background_tasks: BackgroundTasks,
+    agent: Agent,
+    agent_type: str,
+    start_time: float,
+    model: str,
+):
     agent_id = agent.agent_id
     tenant_id = str(agent.tenant_id)
     url = "https://api.openai.com/v1/chat/completions"
-    forward_headers = {"Authorization": f"Bearer {settings.OPENAI_API_KEY}", "Content-Type": "application/json"}
-    
+    forward_headers = {
+        "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
     http_client = get_http_client()
-    req = http_client.build_request("POST", url, json=request_json, headers=forward_headers)
+    req = http_client.build_request(
+        "POST", url, json=request_json, headers=forward_headers
+    )
     response = await _send_openai_request(http_client, req, stream=True)
-    
+
     async def stream_generator():
         token_count = 0
         status_code = response.status_code
         buffer = ""
         violation_blocked = False
         full_text = ""
-        
+
         try:
             async for chunk in response.aiter_text():
                 buffer += chunk
-                
-                if '\n' in buffer or len(buffer) > 100:
+
+                if "\n" in buffer or len(buffer) > 100:
                     redacted, has_violation = scan_and_redact(buffer)
                     if has_violation and settings.FIREWALL_MODE == "BLOCK":
                         violation_blocked = True
                         yield b'{"error": "Compliance violation detected. Stream blocked by Firewall."}'
                         break
-                    
-                    yield redacted.encode('utf-8')
+
+                    yield redacted.encode("utf-8")
                     full_text += redacted
                     buffer = ""
-            
+
             if buffer and not violation_blocked:
                 redacted, has_violation = scan_and_redact(buffer)
                 if has_violation and settings.FIREWALL_MODE == "BLOCK":
                     violation_blocked = True
                     yield b'{"error": "Compliance violation detected. Stream blocked by Firewall."}'
                 else:
-                    yield redacted.encode('utf-8')
+                    yield redacted.encode("utf-8")
                     full_text += redacted
         except httpx.RequestError as e:
-            OPENAI_ERROR_COUNT.labels(agent_type=agent_type, model=model, error_type="stream_error").inc()
-            yield f'{{"error": "Stream disconnected or timed out: {str(e)}" }}'.encode('utf-8')
+            OPENAI_ERROR_COUNT.labels(
+                agent_type=agent_type, model=model, error_type="stream_error"
+            ).inc()
+            yield f'{{"error": "Stream disconnected or timed out: {str(e)}" }}'.encode(
+                "utf-8"
+            )
         finally:
             token_count = num_tokens_from_string(full_text, model)
             latency_ms = (time.time() - start_time) * 1000
-            
-            OPENAI_REQUEST_COUNT.labels(agent_type=agent_type, model=model, status_code=str(status_code)).inc()
-            OPENAI_REQUEST_LATENCY.labels(agent_type=agent_type, model=model).observe(latency_ms / 1000.0)
-            
+
+            OPENAI_REQUEST_COUNT.labels(
+                agent_type=agent_type, model=model, status_code=str(status_code)
+            ).inc()
+            OPENAI_REQUEST_LATENCY.labels(agent_type=agent_type, model=model).observe(
+                latency_ms / 1000.0
+            )
+
             cost = get_cost(model, token_count)
-            
+
             span_data = {
                 "tenant_id": tenant_id,
                 "agent_id": agent_id,
@@ -120,83 +157,128 @@ async def stream_openai_response(request_json: dict, background_tasks: Backgroun
                 "tokens_used": token_count,
                 "cost": cost,
                 "status_code": 403 if violation_blocked else status_code,
-                "payload": request_json
+                "payload": request_json,
             }
-            
+
             if violation_blocked:
                 span_data["error_log"] = "Post-Flight Firewall: Data leakage blocked."
-            
+
             if not violation_blocked:
                 is_exceeded = await check_cost_velocity(agent_id, cost)
                 if is_exceeded:
                     await suspend_agent(agent_id)
-                    span_data["error_log"] = "Automated Kill Switch: Cost velocity limit breached post-flight."
-            
+                    span_data["error_log"] = (
+                        "Automated Kill Switch: Cost velocity limit breached post-flight."
+                    )
+
             background_tasks.add_task(save_interaction_to_db, span_data)
             await response.aclose()
-    
-    return StreamingResponse(stream_generator(), status_code=response.status_code, media_type=response.headers.get("content-type"))
+
+    return StreamingResponse(
+        stream_generator(),
+        status_code=response.status_code,
+        media_type=response.headers.get("content-type"),
+    )
+
 
 @router.post("/chat/completions")
 @limiter.limit("100/minute", key_func=get_agent_id)
-async def chat_completions(request: Request, body: ChatCompletionRequest, background_tasks: BackgroundTasks, agent: Agent = Depends(verify_agent_api_key)):
+async def chat_completions(
+    request: Request,
+    body: ChatCompletionRequest,
+    background_tasks: BackgroundTasks,
+    agent: Agent = Depends(verify_agent_api_key),
+):
     start_time = time.time()
-    
+
     agent_id = agent.agent_id
     agent_type = request.headers.get("X-Agent-Type", "general")
-    
+
     if await is_agent_suspended(agent_id):
         raise HTTPException(status_code=403, detail="Agent is suspended.")
-        
+
     if settings.REDIS_URL:
         # Cost check logic
         pass
 
     is_stream = body.stream
-    
+
     if is_stream:
-        return await stream_openai_response(body.model_dump(), background_tasks, agent, agent_type, start_time, body.model)
+        return await stream_openai_response(
+            body.model_dump(),
+            background_tasks,
+            agent,
+            agent_type,
+            start_time,
+            body.model,
+        )
     else:
         url = "https://api.openai.com/v1/chat/completions"
-        forward_headers = {"Authorization": f"Bearer {settings.OPENAI_API_KEY}", "Content-Type": "application/json"}
-        
+        forward_headers = {
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+
         http_client = get_http_client()
-        response = await _post_openai_request(http_client, url, json=body.model_dump(), headers=forward_headers)
-        
+        response = await _post_openai_request(
+            http_client, url, json=body.model_dump(), headers=forward_headers
+        )
+
         token_count = num_tokens_from_string(response.text, body.model)
         latency_ms = (time.time() - start_time) * 1000
         cost = get_cost(body.model, token_count)
-        
+
         response_text = response.text
         redacted, has_violation = scan_and_redact(response_text)
-        
+
         if has_violation and settings.FIREWALL_MODE == "BLOCK":
             span_data = {
                 "tenant_id": str(agent.tenant_id),
-                "agent_id": agent_id, "agent_type": agent_type, "latency_ms": latency_ms,
-                "tokens_used": token_count, "cost": cost, "status_code": 403,
-                "payload": body.model_dump(), "error_log": "Post-Flight Firewall: Data leakage blocked."
+                "agent_id": agent_id,
+                "agent_type": agent_type,
+                "latency_ms": latency_ms,
+                "tokens_used": token_count,
+                "cost": cost,
+                "status_code": 403,
+                "payload": body.model_dump(),
+                "error_log": "Post-Flight Firewall: Data leakage blocked.",
             }
             background_tasks.add_task(save_interaction_to_db, span_data)
-            raise HTTPException(status_code=403, detail="Compliance violation detected. Response blocked by Firewall.")
-            
+            raise HTTPException(
+                status_code=403,
+                detail="Compliance violation detected. Response blocked by Firewall.",
+            )
+
         error_log = None
         is_exceeded = await check_cost_velocity(agent_id, cost)
         if is_exceeded:
             await suspend_agent(agent_id)
-            error_log = "Automated Kill Switch: Cost velocity limit breached post-flight."
+            error_log = (
+                "Automated Kill Switch: Cost velocity limit breached post-flight."
+            )
 
         span_data = {
             "tenant_id": str(agent.tenant_id),
-            "agent_id": agent_id, "agent_type": agent_type, "latency_ms": latency_ms,
-            "tokens_used": token_count, "cost": cost, "status_code": response.status_code,
-            "payload": body.model_dump(), "error_log": error_log
+            "agent_id": agent_id,
+            "agent_type": agent_type,
+            "latency_ms": latency_ms,
+            "tokens_used": token_count,
+            "cost": cost,
+            "status_code": response.status_code,
+            "payload": body.model_dump(),
+            "error_log": error_log,
         }
         background_tasks.add_task(save_interaction_to_db, span_data)
-        
-        OPENAI_REQUEST_COUNT.labels(agent_type=agent_type, model=body.model, status_code=str(response.status_code)).inc()
-        OPENAI_REQUEST_LATENCY.labels(agent_type=agent_type, model=body.model).observe(latency_ms / 1000.0)
-        
+
+        OPENAI_REQUEST_COUNT.labels(
+            agent_type=agent_type,
+            model=body.model,
+            status_code=str(response.status_code),
+        ).inc()
+        OPENAI_REQUEST_LATENCY.labels(agent_type=agent_type, model=body.model).observe(
+            latency_ms / 1000.0
+        )
+
         if has_violation and settings.FIREWALL_MODE == "SANITIZE":
             try:
                 return json.loads(redacted)
