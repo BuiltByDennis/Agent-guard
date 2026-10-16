@@ -171,7 +171,14 @@ app.include_router(telemetry_router)
 
 
 @app.get("/health")
-async def health_check(response: Response, db: AsyncSession = Depends(get_db)):
+async def health_check():
+    """Liveness: the process is up. Dependency checks live on /ready —
+    a liveness probe that 503s on a Redis blip gets healthy pods killed."""
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+async def readiness_check(response: Response, db: AsyncSession = Depends(get_db)):
     status = {"status": "ok", "db": "ok", "redis": "ok"}
     try:
         await db.execute(text("SELECT 1"))
