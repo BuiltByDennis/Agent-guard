@@ -1,4 +1,3 @@
-import os
 import logging
 import asyncio
 import json
@@ -43,13 +42,14 @@ structlog.configure(
         structlog.contextvars.merge_contextvars,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.stdlib.add_log_level,
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
     logger_factory=structlog.PrintLoggerFactory(),
-    cache_logger_on_first_use=False
+    cache_logger_on_first_use=False,
 )
 logger = structlog.get_logger(__name__)
+
 
 async def dlq_worker():
     backoff = 1
@@ -76,6 +76,7 @@ async def dlq_worker():
             logger.error("dlq_worker_error", error=str(e))
             await asyncio.sleep(5)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await initialize_database()
@@ -90,8 +91,10 @@ async def lifespan(app: FastAPI):
     await close_http_client()
     await close_redis()
 
+
 app = FastAPI(title="Agent Proxy", lifespan=lifespan)
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
 
 @app.middleware("http")
 async def tracing_middleware(request: Request, call_next):
@@ -102,31 +105,43 @@ async def tracing_middleware(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
+
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Content-Security-Policy"] = "default-src 'self'"
     return response
+
 
 @app.middleware("http")
 async def csrf_middleware(request: Request, call_next):
     # Skip CSRF check for auth endpoints (token, refresh, logout are handled separately)
     if request.url.path in ["/v1/auth/token", "/v1/auth/refresh", "/v1/auth/logout"]:
         return await call_next(request)
-        
+
     # Skip CSRF for routes using X-API-Key authentication (agent proxy calls)
     if request.headers.get("X-API-Key"):
         return await call_next(request)
-    
+
+    # CSRF only applies to cookie-authenticated browser requests. Requests
+    # without the auth cookie (API clients, health/test clients) have no
+    # ambient credential for an attacker to abuse, and enforcing CSRF there
+    # breaks normal API error semantics (e.g. 422 validation responses).
+    if not request.cookies.get("access_token"):
+        return await call_next(request)
+
     if request.method in ["POST", "PATCH", "DELETE", "PUT"]:
         csrf_cookie = request.cookies.get("csrf_token")
         csrf_header = request.headers.get("X-CSRF-Token")
         if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
             return Response(status_code=403, content="CSRF Token Missing or Invalid")
     return await call_next(request)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -135,7 +150,14 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Agent-ID", "X-Agent-Type", "X-API-Key"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-CSRF-Token",
+        "X-Agent-ID",
+        "X-Agent-Type",
+        "X-API-Key",
+    ],
 )
 
 app.state.limiter = limiter
@@ -147,6 +169,7 @@ app.include_router(agents_router)
 app.include_router(admin_router)
 app.include_router(telemetry_router)
 
+
 @app.get("/health")
 async def health_check(response: Response, db: AsyncSession = Depends(get_db)):
     status = {"status": "ok", "db": "ok", "redis": "ok"}
@@ -157,13 +180,13 @@ async def health_check(response: Response, db: AsyncSession = Depends(get_db)):
             "size": pool.size(),
             "checkedin": pool.checkedin(),
             "overflow": pool.overflow(),
-            "checkedout": pool.checkedout()
+            "checkedout": pool.checkedout(),
         }
     except Exception as e:
         logger.error("health_check_db_failed", error=str(e))
         status["db"] = "error"
         status["status"] = "error"
-    
+
     try:
         redis_client = get_redis()
         if redis_client:
