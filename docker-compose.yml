@@ -34,6 +34,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - APP_ENV=development
       - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/proxy_db
       - REDIS_URL=redis://redis:6379/0
       - FRONTEND_URL=http://localhost:3000
