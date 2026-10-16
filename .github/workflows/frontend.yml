@@ -11,25 +11,34 @@ on:
       - 'frontend/**'
 
 jobs:
-  lint-and-build:
+  lint-test-build:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./frontend
+    env:
+      # Build-time public config; CI uses a placeholder, real deployments
+      # set their own value.
+      NEXT_PUBLIC_API_URL: http://localhost:8000
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: "20"
-        
+        cache: "npm"
+        cache-dependency-path: frontend/package-lock.json
+
     - name: Install dependencies
-      run: npm install
-        
+      run: npm ci
+
     - name: Lint
       run: npm run lint
-      
+
+    - name: Test
+      run: npm test
+
     - name: Build Next.js
       run: npm run build
