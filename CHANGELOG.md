@@ -1,3 +1,14 @@
+## [1.0.8](https://github.com/BuiltByDennis/Agent-guard/compare/v1.0.7...v1.0.8) (2026-10-16)
+
+
+### Bug Fixes
+
+* Phase 1 one true schema (migrations converge + forced RLS, tenant filters, init_db runs migrations, real-DB integration tests) ([6239ecf](https://github.com/BuiltByDennis/Agent-guard/commit/6239ecfbcf1751c89bf31411fc0febf4ea596dc3))
+* Phase 1 one true schema (migrations converge + forced RLS, tenant filters, init_db runs migrations, real-DB integration tests) ([060a1a9](https://github.com/BuiltByDennis/Agent-guard/commit/060a1a983e75253a489965a2b328220084e9c46a))
+* Phase 1 one true schema (migrations converge + forced RLS, tenant filters, init_db runs migrations, real-DB integration tests) ([908daff](https://github.com/BuiltByDennis/Agent-guard/commit/908daff9be60614437cb92b44ba2baa8463eba8e))
+* Phase 1 one true schema (migrations converge + forced RLS, tenant filters, init_db runs migrations, real-DB integration tests) ([c8544d5](https://github.com/BuiltByDennis/Agent-guard/commit/c8544d58225c8090f36a4b7a0cca4e602cbb0762))
+* Phase 1 one true schema (migrations converge + forced RLS, tenant filters, init_db runs migrations, real-DB integration tests) ([f0b0fca](https://github.com/BuiltByDennis/Agent-guard/commit/f0b0fcad8236244e9c738fd14c3e4a87fe281052))
+
 ## [1.0.7](https://github.com/BuiltByDennis/Agent-guard/compare/v1.0.6...v1.0.7) (2026-10-16)
 
 
