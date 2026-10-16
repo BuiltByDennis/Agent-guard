@@ -1,3 +1,32 @@
+## [1.0.4](https://github.com/BuiltByDennis/Agent-guard/compare/v1.0.3...v1.0.4) (2026-10-16)
+
+
+### Bug Fixes
+
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([ef2afca](https://github.com/BuiltByDennis/Agent-guard/commit/ef2afcac455eb7185eb05b42a16881a1ac151cbf))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([a1573a8](https://github.com/BuiltByDennis/Agent-guard/commit/a1573a86c2ada84389deea6b9b01dd9974b861d2))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([21c7eba](https://github.com/BuiltByDennis/Agent-guard/commit/21c7eba30cbc0d4bd89ac1dd8aad84fde21aac72))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([c60c294](https://github.com/BuiltByDennis/Agent-guard/commit/c60c294d782d1f23c507c4cbf7d0022a05f37855))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([031ddd1](https://github.com/BuiltByDennis/Agent-guard/commit/031ddd1209c6daa12f1798ba0e3668ba23357ad1))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([31cf97d](https://github.com/BuiltByDennis/Agent-guard/commit/31cf97d560672b6b4eaa5695f05d3d6228ea992e))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([b855d3e](https://github.com/BuiltByDennis/Agent-guard/commit/b855d3e220390384d7c1ba59f93a1b9f942cbb17))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([fd38d67](https://github.com/BuiltByDennis/Agent-guard/commit/fd38d67ffa6d4eee7cb82702caf5245acd9a44a7))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([3b6d0ae](https://github.com/BuiltByDennis/Agent-guard/commit/3b6d0ae6d8f033717b797477b2b175b870fb5ab8))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([e6556e3](https://github.com/BuiltByDennis/Agent-guard/commit/e6556e329aa4ac091194bae7905e67a7e38038a0))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([9505f48](https://github.com/BuiltByDennis/Agent-guard/commit/9505f48b28adb7b969587ea0b699fe4879fc67fb))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([5ae9a1a](https://github.com/BuiltByDennis/Agent-guard/commit/5ae9a1add89eacec2dac0ffe3f69a588d4a3d34c))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([a9c6fca](https://github.com/BuiltByDennis/Agent-guard/commit/a9c6fca4ba9e0c9df117169fa293376107a86f7e))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([d377247](https://github.com/BuiltByDennis/Agent-guard/commit/d3772476ae6c25baf427c037c83f47f940d98835))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([849fd0c](https://github.com/BuiltByDennis/Agent-guard/commit/849fd0c2fb6ec5243dfb5a85cb594edfc6507687))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([d493565](https://github.com/BuiltByDennis/Agent-guard/commit/d4935654608bef4e54fd4a210b42591da50e814b))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([7df6fa2](https://github.com/BuiltByDennis/Agent-guard/commit/7df6fa20a1bd87e63dee4952e4621c414305a728))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([b629abd](https://github.com/BuiltByDennis/Agent-guard/commit/b629abd8102073ccd64163bd2cfd4d08a58efaba))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([6949353](https://github.com/BuiltByDennis/Agent-guard/commit/694935303092a673b5e690a641433882cfcd73fe))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([203b498](https://github.com/BuiltByDennis/Agent-guard/commit/203b498699fa7abbcc151e740d868da86ccdbb08))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([72a90c8](https://github.com/BuiltByDennis/Agent-guard/commit/72a90c8a64faf47a1a94ff27f207027d467810c3))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([d1001f5](https://github.com/BuiltByDennis/Agent-guard/commit/d1001f5f9f3f84d58575ffcea9d6ab74f7dbd2d9))
+* Phase 0 production-readiness fixes (green tests/lint, patched deps, fail-fast JWT secret, scoped CSRF) ([df4cce1](https://github.com/BuiltByDennis/Agent-guard/commit/df4cce11af320bc9a4752d0712d9bc1210e37711))
+
 ## [1.0.3](https://github.com/BuiltByDennis/Agent-guard/compare/v1.0.2...v1.0.3) (2026-10-16)
 
 
