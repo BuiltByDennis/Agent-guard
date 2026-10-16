@@ -24,7 +24,10 @@ async def get_telemetry_time_series(
             func.sum(InteractionSpan.cost).label("daily_cost"),
             func.avg(InteractionSpan.latency_ms).label("avg_latency"),
         )
-        .where(InteractionSpan.created_at >= start_date)
+        .where(
+            InteractionSpan.tenant_id == current_user.id,
+            InteractionSpan.created_at >= start_date,
+        )
         .group_by(func.date_trunc("day", InteractionSpan.created_at))
         .order_by(func.date_trunc("day", InteractionSpan.created_at))
     )
@@ -59,7 +62,7 @@ async def get_telemetry_summary(
         func.sum(case((InteractionSpan.status_code == 200, 1), else_=0)).label(
             "success_rows"
         ),
-    )
+    ).where(InteractionSpan.tenant_id == current_user.id)
 
     result = await db.execute(query)
     row = result.fetchone()
