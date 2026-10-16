@@ -73,6 +73,13 @@ async def create_agent(
     )
     db.add(new_agent)
 
+    # Audit in the SAME transaction: the RLS tenant context is SET LOCAL,
+    # so it dies at the first commit — logging after a commit runs with no
+    # tenant set and the audit_logs WITH CHECK policy rejects the insert.
+    await log_admin_action(
+        db, current_user.id, current_user.id, "agent_created", agent_data.agent_id
+    )
+
     try:
         await db.commit()
     except IntegrityError:
@@ -80,11 +87,6 @@ async def create_agent(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Agent ID already exists."
         )
-
-    await log_admin_action(
-        db, current_user.id, current_user.id, "agent_created", agent_data.agent_id
-    )
-    await db.commit()
 
     return {
         "message": "Agent created",
@@ -130,6 +132,11 @@ async def create_user(
     )
     db.add(new_user)
 
+    # Same-transaction audit logging — see create_agent for why.
+    await log_admin_action(
+        db, current_user.id, current_user.id, "user_created", user_data.email
+    )
+
     try:
         await db.commit()
     except IntegrityError:
@@ -137,11 +144,6 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="User email already exists."
         )
-
-    await log_admin_action(
-        db, current_user.id, current_user.id, "user_created", user_data.email
-    )
-    await db.commit()
 
     return {"message": "User created", "email": user_data.email}
 
