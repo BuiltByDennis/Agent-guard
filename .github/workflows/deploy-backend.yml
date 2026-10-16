@@ -1,21 +1,26 @@
 name: Deploy Backend to Cloud Run
 
+# Deploy is GATED on Backend CI: it only runs after the "Backend CI"
+# workflow completes successfully on main (or when dispatched manually).
+# Previously this workflow deployed on every push regardless of test
+# results, which shipped failing code to production.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
+  workflow_run:
+    workflows: ["Backend CI"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -33,6 +38,7 @@ jobs:
             REDIS_URL=${{ secrets.REDIS_URL }}
             SENTRY_DSN=${{ secrets.SENTRY_DSN }}
             JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            APP_ENV=production
             FIREWALL_MODE=BLOCK
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             FRONTEND_URL=${{ secrets.FRONTEND_URL }}
