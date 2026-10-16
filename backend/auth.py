@@ -1,9 +1,10 @@
-import os
 import jwt
 import uuid
 from datetime import datetime, timedelta, timezone
-from pwdlib import PasswordHash  # Modern drop-in replacement for passlib
 from fastapi import Depends, HTTPException, status, Request
+from pwdlib import PasswordHash
+from pwdlib.hashers.argon2 import Argon2Hasher
+from pwdlib.hashers.bcrypt import BcryptHasher
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -15,34 +16,34 @@ from database import get_db, AsyncSessionLocal
 from core.config import settings
 
 SECRET_KEY = settings.SECRET_KEY
-if not SECRET_KEY or SECRET_KEY == "change-me-in-production":
-    if not os.getenv("JWT_SECRET_KEY") and not os.getenv("SECRET_KEY"):
-        print("WARNING: Using default SECRET_KEY in production is insecure.")
 ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
-# Initialize the modern, actively maintained password hashing tool
-from pwdlib import PasswordHash
-from pwdlib.hashers.argon2 import Argon2Hasher
-from pwdlib.hashers.bcrypt import BcryptHasher
+# Password hashing: pwdlib with Argon2 (default) + Bcrypt (legacy support).
+# The default-secret guard lives in core.config.Settings and fails fast.
 
 # Initialize with both Argon2 (new default) and Bcrypt (legacy support)
-password_hash = PasswordHash((
-    Argon2Hasher(),
-    BcryptHasher(),
-))
+password_hash = PasswordHash(
+    (
+        Argon2Hasher(),
+        BcryptHasher(),
+    )
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/token")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return password_hash.verify(plain_password, hashed_password)
-    except Exception as e:
+    except Exception:
         return False
+
 
 def get_password_hash(password: str) -> str:
     return password_hash.hash(password)
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -52,6 +53,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire, "type": "access"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -63,20 +65,32 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire, "type": "refresh", "jti": jti})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def verify_agent_api_key(request: Request, api_key: str = Depends(api_key_header), db: AsyncSession = Depends(get_db)):
+
+async def verify_agent_api_key(
+    request: Request,
+    api_key: str = Depends(api_key_header),
+    db: AsyncSession = Depends(get_db),
+):
     agent_id = request.headers.get("X-Agent-ID")
     if not agent_id:
         raise HTTPException(status_code=400, detail="Missing X-Agent-ID header")
     if not api_key:
         raise HTTPException(status_code=401, detail="Missing X-API-Key header")
-        
-    result = await db.execute(select(Agent).where(Agent.agent_id == agent_id, Agent.deleted_at.is_(None)))
+
+    result = await db.execute(
+        select(Agent).where(Agent.agent_id == agent_id, Agent.deleted_at.is_(None))
+    )
     agent = result.scalar_one_or_none()
-    
-    if not agent or not verify_password(api_key, agent.hashed_api_key) or not agent.is_active:
+
+    if (
+        not agent
+        or not verify_password(api_key, agent.hashed_api_key)
+        or not agent.is_active
+    ):
         raise HTTPException(status_code=401, detail="Invalid API Key or inactive agent")
-    
+
     return agent
+
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)):
     token = request.cookies.get("access_token")
@@ -101,24 +115,24 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
             raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
-        
+
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
     return user
 
+
 async def require_admin(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not enough privileges")
     return current_user
+
 
 async def get_db_with_rls(current_user: User = Depends(get_current_user)):
     async with AsyncSessionLocal() as session:
         # Inject the user's ID into the Postgres session for RLS.
         # SET LOCAL does not support parameter placeholders in asyncpg, so emit a literal value.
         tenant_id = str(current_user.id).replace("'", "''")
-        await session.execute(
-            text(f"SET LOCAL app.current_tenant = '{tenant_id}'")
-        )
+        await session.execute(text(f"SET LOCAL app.current_tenant = '{tenant_id}'"))
         yield session
