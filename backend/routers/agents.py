@@ -37,7 +37,9 @@ async def get_agent_performance(
         .where(text("agent_id = :agent_id"))
     )
 
-    result = await db.execute(query, {"agent_id": agent_id})
+    result = await db.execute(
+        query, {"agent_id": agent_id, "tenant_id": str(current_user.id)}
+    )
     row = result.fetchone()
 
     if not row or row.total_rows == 0:
@@ -100,6 +102,7 @@ async def get_agents_metrics(
             func.avg(InteractionSpan.latency_ms).label("latency"),
             func.sum(InteractionSpan.cost).label("cost"),
         )
+        .where(InteractionSpan.tenant_id == current_user.id)
         .group_by(InteractionSpan.agent_id)
         .offset(skip)
         .limit(limit)
@@ -135,7 +138,10 @@ async def get_agent_logs(
     db: AsyncSession = Depends(get_db_with_rls),
     current_user: User = Depends(get_current_user),
 ):
-    query = select(InteractionSpan).where(InteractionSpan.agent_id == agent_id)
+    query = select(InteractionSpan).where(
+        InteractionSpan.agent_id == agent_id,
+        InteractionSpan.tenant_id == current_user.id,
+    )
 
     if status_filter:
         query = query.where(InteractionSpan.status_code == int(status_filter))
