@@ -77,6 +77,10 @@ async def verify_agent_api_key(
     if not api_key:
         raise HTTPException(status_code=401, detail="Missing X-API-Key header")
 
+    # The agents table is RLS-forced, and the tenant is not known until the
+    # agent is found. The Phase 1 policy lets this one lookup through when
+    # the session raises the agent-auth flag (SET LOCAL = this transaction).
+    await db.execute(text("SET LOCAL app.agent_auth_lookup = 'on'"))
     result = await db.execute(
         select(Agent).where(Agent.agent_id == agent_id, Agent.deleted_at.is_(None))
     )
