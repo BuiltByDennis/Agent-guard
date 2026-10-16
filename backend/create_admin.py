@@ -1,14 +1,18 @@
-# 1. This must happen before importing auth to prevent the RuntimeError
+import asyncio
+import getpass
+
 from dotenv import load_dotenv
+
+from auth import get_password_hash
+from database import AsyncSessionLocal
+from init_db import init_db
+from models import User
+
+# Load .env before anything reads settings. database.py also calls
+# load_dotenv() at import time, and core.config reads .env itself, so
+# importing first is safe; this call is kept for explicitness.
 load_dotenv()
 
-import asyncio
-from models import User
-from database import AsyncSessionLocal
-from auth import get_password_hash
-from init_db import init_db
-
-import getpass
 
 async def create_admin():
     email = input("Enter admin email: ")
@@ -18,14 +22,11 @@ async def create_admin():
 
     async with AsyncSessionLocal() as session:
         hashed_pw = get_password_hash(password)
-        new_user = User(
-            email=email,
-            hashed_password=hashed_pw,
-            role="admin"
-        )
+        new_user = User(email=email, hashed_password=hashed_pw, role="admin")
         session.add(new_user)
         await session.commit()
         print(f"Admin user {email} created successfully!")
+
 
 if __name__ == "__main__":
     asyncio.run(create_admin())
