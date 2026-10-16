@@ -17,8 +17,15 @@ client = TestClient(app)
 
 
 def test_health_check():
-    app.dependency_overrides[get_db] = override_get_db
+    # Liveness must not depend on the database at all
     response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_readiness_check():
+    app.dependency_overrides[get_db] = override_get_db
+    response = client.get("/ready")
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
